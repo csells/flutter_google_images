@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_9/google_images.dart';
+import 'package:flutter_google_images/google_images.dart';
 
 late final GoogleImages images;
 
