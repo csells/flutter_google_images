@@ -1,21 +1,17 @@
-import 'dart:typed_data';
-import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:io';
+import 'package:flutter_application_9/google_images.dart';
 
-import 'package:http/http.dart' as http;
-import 'package:html/parser.dart' show parse;
+late final GoogleImages images;
 
 void main() async {
-  final images = await GoogleImages.search('male half orc barbarian');
-  print(images.images[(images.images.length / 2).floor()]);
+  images = await GoogleImages.search('female half elf mage');
   runApp(const App());
 }
 
 class App extends StatelessWidget {
-  static const title = 'Flutter App';
+  static const title = 'Google Image Search Example';
 
   const App({Key? key}) : super(key: key);
   @override
@@ -25,50 +21,50 @@ class App extends StatelessWidget {
       );
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = (images.images.length / 2).floor();
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text(App.title)),
-        body: const Center(
-          child: Text('hello, world'),
+        body: Center(
+          child: Column(
+            children: [
+              ButtonBar(
+                alignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: _index == 0 ? null : _arrowLeft,
+                    icon: const Icon(Icons.arrow_left),
+                  ),
+                  IconButton(
+                    onPressed:
+                        _index == images.images.length - 1 ? null : _arrowRight,
+                    icon: const Icon(Icons.arrow_right),
+                  ),
+                ],
+              ),
+              Image.memory(images.images[_index]),
+            ],
+          ),
         ),
       );
-}
 
-class GoogleImages {
-  static final _re = RegExp(r"_setImgSrc\('\d+','(?<data>[^']+)'\);");
-  static const Map<String, String> _headers = {
-    HttpHeaders.userAgentHeader:
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36'
-  };
+  void _arrowLeft() => setState(() => _index = max(0, _index - 1));
 
-  final List<Uint8List> images;
-  GoogleImages(this.images);
-
-  static Future<GoogleImages> search(String search) async {
-    final res = await http.get(
-      Uri.parse('https://www.google.com/search?q=$search&tbm=isch&sclient=img'),
-      headers: _headers,
-    );
-
-    if (res.statusCode != HttpStatus.ok) return GoogleImages([]);
-
-    final images = parse(res.body)
-        .querySelectorAll('script')
-        .map((e) => e.text)
-        .where((t) => t.startsWith('_setImgSrc'))
-        .map((t) => _re
-            .firstMatch(t)!
-            .namedGroup('data')
-            .toString()
-            .split(',')[1]
-            .replaceAll(r'\/', r'/')
-            .replaceAll(r'\x3d', r'='))
-        .map((encoded) => base64.decode(encoded))
-        .toList();
-
-    return GoogleImages(images);
-  }
+  void _arrowRight() =>
+      setState(() => _index = min(images.images.length - 1, _index + 1));
 }
