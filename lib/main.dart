@@ -3,12 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_google_images/google_images.dart';
 
-late final GoogleImages images;
-
-void main() async {
-  images = await GoogleImages.search('female half elf mage');
-  runApp(const App());
-}
+void main() => runApp(const App());
 
 class App extends StatelessWidget {
   static const title = 'Google Image Search Example';
@@ -29,12 +24,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late int _index;
+  late final TextEditingController _controller;
+  Future<GoogleImages>? _future;
 
   @override
   void initState() {
     super.initState();
-    _index = (images.images.length / 2).floor();
+    _controller = TextEditingController(text: 'female half elf mage');
+    _onSearch();
   }
 
   @override
@@ -43,28 +40,108 @@ class _HomePageState extends State<HomePage> {
         body: Center(
           child: Column(
             children: [
-              ButtonBar(
-                alignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    onPressed: _index == 0 ? null : _arrowLeft,
-                    icon: const Icon(Icons.arrow_left),
-                  ),
-                  IconButton(
-                    onPressed:
-                        _index == images.images.length - 1 ? null : _arrowRight,
-                    icon: const Icon(Icons.arrow_right),
-                  ),
-                ],
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 400,
+                      child: TextField(
+                        controller: _controller,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter a search term',
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                        onPressed: _onSearch, child: const Text('Search'))
+                  ],
+                ),
               ),
-              Image.memory(images.images[_index]),
+              FutureBuilder<GoogleImages>(
+                future: _future,
+                builder: ((context, snapshot) {
+                  if (_future == null) {
+                    return Container();
+                  }
+
+                  if (snapshot.hasError) {
+                    return const Text('error');
+                  }
+
+                  if (!snapshot.hasData) {
+                    return const CircularProgressIndicator();
+                  }
+
+                  assert(snapshot.hasData);
+                  return SearchResults(snapshot.data!);
+                }),
+              ),
             ],
           ),
         ),
       );
 
-  void _arrowLeft() => setState(() => _index = max(0, _index - 1));
+  void _onSearch() {
+    _future = GoogleImages.search(_controller.text);
+    setState(() {});
+  }
+}
 
-  void _arrowRight() =>
-      setState(() => _index = min(images.images.length - 1, _index + 1));
+class SearchResults extends StatefulWidget {
+  final GoogleImages images;
+
+  const SearchResults(this.images, {super.key});
+
+  @override
+  State<SearchResults> createState() => _SearchResultsState();
+}
+
+class _SearchResultsState extends State<SearchResults> {
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _onSetImages();
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchResults oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _onSetImages();
+  }
+
+  void _onSetImages() => _index = (widget.images.images.length / 2).floor();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ButtonBar(
+          alignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              onPressed: _index == 0 ? null : _onArrowLeft,
+              icon: const Icon(Icons.arrow_left),
+            ),
+            IconButton(
+              onPressed: _index == widget.images.images.length - 1
+                  ? null
+                  : _onArrowRight,
+              icon: const Icon(Icons.arrow_right),
+            ),
+          ],
+        ),
+        Image.memory(widget.images.images[_index]),
+      ],
+    );
+  }
+
+  void _onArrowLeft() => setState(() => _index = max(0, _index - 1));
+
+  void _onArrowRight() =>
+      setState(() => _index = min(widget.images.images.length - 1, _index + 1));
 }
